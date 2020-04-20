@@ -91,8 +91,8 @@ def get_nearby_businesses(park_id):
     
     connection = sqlite3.connect("Final_Project.sqlite")
     cursor = connection.cursor()
-    latitude = Decimal(cursor.execute(f'SELECT * FROM Parks WHERE Id={park_id}').fetchall()[0][-2])
-    longitude = Decimal(cursor.execute(f'SELECT * FROM Parks WHERE Id={park_id}').fetchall()[0][-1])
+    latitude = Decimal(cursor.execute(f'SELECT * FROM Parks WHERE Id={park_id}').fetchall()[0][1])
+    longitude = Decimal(cursor.execute(f'SELECT * FROM Parks WHERE Id={park_id}').fetchall()[0][2])
     connection.close()
 
     resource_url = BASE_URL
