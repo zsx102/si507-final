@@ -12,16 +12,15 @@ import sqlite3
 from decimal import Decimal
 
 
-PARKS_URL = 'https://www.latlong.net/category/national-parks-236-42.html'
+COLLEGE_URL = 'https://www.latlong.net/category/colleges-236-35.html'
 BASE_URL = 'https://api.yelp.com/v3/businesses/search'
 CACHE_DICT = {}
 CACHE_FILE_NAME = 'cache.json'
 API_KEY = secrets.API_KEY
 
-
  
-def build_parks_list(url):
-    '''scraping the web page and get the information of each park
+def build_college_list(url):
+    '''scraping the web page and get the information of each college
 
     Parameters
     ----------
@@ -31,32 +30,38 @@ def build_parks_list(url):
     Returns
     -------
     list
-        the park information
+        the information of the college
     '''
     CACHE_DICT = open_cache()
     url_text = make_url_request_using_cache(url, CACHE_DICT)
-
-    parks_list = []
+    college_list = []
     soup = BeautifulSoup(url_text, 'html.parser')
-    parks = soup.find_all("tr")[1:]
-    
-    for park in parks:
-        title = park.find('a')['title']
-        park_name = title.split(',')[0].strip()
-        latitude = park.find_all('td')[1].string
-        longitude = park.find_all('td')[2].string
-        parks_list.append((park_name, latitude, longitude))
+    colleges = soup.find_all("tr")[1:]
+    for index in range(0, len(colleges)):
+        title = colleges[index].find('a')['title']
+        if index == 6:
+            name = title.split(',')[0].strip() + ', ' + title.split(',')[1].strip()
+            city = title.split(',')[2].strip()
+        elif index == 11 or index == 14 or index == 15:
+            name = title.split(',')[0].strip()
+            city = '####'
+        else:
+            name = title.split(',')[0].strip()
+            city = title.split(',')[1].strip()
+        state = title.split(',')[-2].strip()
+        latitude = colleges[index].find_all('td')[-2].string
+        longitude = colleges[index].find_all('td')[-1].string
+        college_list.append((name, city, state, latitude, longitude))
+    return college_list
 
-    return parks_list
 
-
-def insert_parks_database(parks_list):
+def insert_colleges_database(college_list):
     '''insert the data into a sqlite database.
 
     Parameters
     ----------
-    parks_list: list
-        the list with all parks info
+    college_list: list
+        the list with all colleges info
     
     Returns
     -------
@@ -66,22 +71,22 @@ def insert_parks_database(parks_list):
     connection = sqlite3.connect("Final_Project.sqlite")
     cursor = connection.cursor()
     pk = 1
-    for park in parks_list:
-        query = f'''INSERT INTO Parks (Id, ParkName, Latitude, Longitude)
-        VALUES ({pk}, "{park[0]}", "{park[1]}", "{park[2]}")
+    for college in college_list:
+        query = f'''INSERT INTO Colleges (Id, Name, City, State, Latitude, Longitude)
+        VALUES ({pk}, "{college[0]}", "{college[1]}", "{college[2]}",  "{college[3]}", "{college[4]}")
         '''
         cursor.execute(query)
         pk += 1
         connection.commit()
     connection.close()
 
-def get_nearby_businesses(park_id):
-    '''with specific park id get 20 nearby businesses from yelp api.
+def get_nearby_businesses(college_id):
+    '''Get nearby businesses from yelp api with specific college id
 
     Parameters
     ----------
-    park_id: int
-        the id of the specific park
+    college_id: int
+        the id of the specific college
     
     Returns
     -------
@@ -91,8 +96,8 @@ def get_nearby_businesses(park_id):
     
     connection = sqlite3.connect("Final_Project.sqlite")
     cursor = connection.cursor()
-    latitude = Decimal(cursor.execute(f'SELECT * FROM Parks WHERE Id={park_id}').fetchall()[0][1])
-    longitude = Decimal(cursor.execute(f'SELECT * FROM Parks WHERE Id={park_id}').fetchall()[0][2])
+    latitude = Decimal(cursor.execute(f'SELECT * FROM Colleges WHERE Id={college_id}').fetchall()[0][-2])
+    longitude = Decimal(cursor.execute(f'SELECT * FROM Colleges WHERE Id={college_id}').fetchall()[0][-1])
     connection.close()
 
     resource_url = BASE_URL
@@ -128,7 +133,7 @@ def open_cache():
 
 
 def save_cache(cache):
-    '''saves the parks of the cache to disk
+    '''saves the colleges of the cache to disk
     
     Parameters
     ----------
@@ -176,12 +181,12 @@ def make_url_request_using_cache(url, cache):
 
 
 def insert_businesses_database(id):
-    '''insert businesses data into the sqlite database align with the park id
+    '''insert businesses data into the sqlite database attached with the college id
 
     Parameters
     ----------
-    park_id: int
-        the id of the park
+    college_id: int
+        the id of the college
     
     Returns
     -------
@@ -191,29 +196,26 @@ def insert_businesses_database(id):
     business_dict = get_nearby_businesses(id)
     connection = sqlite3.connect("Final_Project.sqlite")
     cursor = connection.cursor()
-    pk = 1
+    i = 1
     for business in business_dict['businesses']:
         name = business['name']
-        park_id = id
-        rating = business['rating'] if 'rating' in business else 'NULL'
-        price = business['price'] if 'price' in business else 'NULL'
-        distance = business['distance'] if 'distance' in business else 'NULL'
-        link = business['url'] if 'url' in business else 'NULL'
-        query = f'''INSERT INTO Businesses (Id, Name, ParkId, Rating, AvgPrice, Distance, Link)
-        VALUES ({pk}, "{name}", {park_id}, "{rating}", "{price}", "{distance}", "{link}")
+        college_id = id
+        rating = business['rating'] if 'rating' in business else '####'
+        price = business['price'] if 'price' in business else '####'
+        distance = business['distance'] if 'distance' in business else '####'
+        category = business['categories'][0]['title']
+        query = f'''INSERT INTO Businesses (Id, Name, CollegeId, Rating, AvgPrice, Distance, Category)
+        VALUES ({i}, "{name}", {college_id}, "{rating}", "{price}", "{distance}", "{category}")
         '''
         cursor.execute(query)
-        pk += 1
+        i += 1
         connection.commit()
     connection.close()
 
 
-
-
-
 if __name__ == "__main__":
-    parks_list = build_parks_list(PARKS_URL)
-    insert_parks_database(parks_list)
-    for id in range(1, len(parks_list) + 1):
+    college_list = build_college_list(COLLEGE_URL)
+    insert_colleges_database(college_list)
+    for id in range(1, len(college_list) + 1):
         insert_businesses_database(id)
     

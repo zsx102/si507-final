@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF8'/>
+    <title>Plot</title>
+    <script>
+        function goBack() {
+            window.history.back()
+        }
+    </script>
+</head>
+<body>
+    <h1> Here is the plot! </h1>
+    {{plot_div | safe}}
+    <button onclick='goBack()'>Back To Index</button>
+</html>

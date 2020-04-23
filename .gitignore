@@ -1,2 +1,5 @@
 secrets.py
 __pycache__
+Final_Project.sqlite
+cache.json
+.DS_Store
